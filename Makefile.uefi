@@ -1,0 +1,6 @@
+.PHONY: all
+
+all:
+	@echo "==> [Docker] Сборка UEFI (заглушка для запуска без логики компиляции)"
+	mkdir -p build
+	mkdir -p fat_disk/EFI/BOOT
