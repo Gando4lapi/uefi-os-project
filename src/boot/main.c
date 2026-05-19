@@ -18,8 +18,6 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     // Вывод карты памяти UEFI
     print_memory_map(SystemTable);
 
-    }
-
     // Загрузка файла hello.txt и вывод его содержимого
     EFI_FILE_PROTOCOL *file = open_file(ImageHandle, SystemTable, L"hello.txt");
     if (file) {
@@ -28,7 +26,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
         EFI_STATUS fstatus = load_file_to_memory(file, &buffer, &size, SystemTable);
         if (!EFI_ERROR(fstatus) && buffer) {
             Print(L"\n--- Contents of hello.txt ---\r\n");
-            // Вывод посимвольно (считаем файл текстовым в UTF-16? нет, в ASCII)
+            // Вывод посимвольно (считаем файл текстовым в ASCII)
             for (UINTN i = 0; i < size; i++) {
                 CHAR8 ch = ((CHAR8 *)buffer)[i];
                 if (ch >= 32 && ch < 127) {
@@ -40,7 +38,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
                 } else if (ch == '\n') {
                     Print(L"\r\n");
                 }
-                // r игнорируем
+                // '\r' игнорируем
             }
             Print(L"\n--- End of file ---\r\n");
             uefi_call_wrapper(SystemTable->BootServices->FreePool, 1, buffer);
