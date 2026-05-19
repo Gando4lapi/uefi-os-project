@@ -1,41 +1,18 @@
-ARCH            = x86_64
-TARGET          = BOOTX64.EFI
+ARCH            = $(shell uname -m | sed s,i[3456789]86,ia32,)
+CFLAGS          = -I/usr/include/efi -I/usr/include/efi/$(ARCH) -fpic -ffreestanding -fno-stack-protector -fno-stack-check -fshort-wchar -mno-red-zone
+LDFLAGS         = -nostdlib -znocombreloc -T /usr/lib/elf_$(ARCH)_efi.lds -shared -Bsymbolic -L /usr/lib /usr/lib/crt0-efi-$(ARCH).o
 
-SRC_DIR         = src/boot
-BUILD_DIR       = build
-FAT_DIR         = fat_disk/EFI/BOOT
+SOURCES = $(wildcard src/boot/*.c)
+OBJECTS = $(SOURCES:.c=.o)
+TARGET = BOOTX64.EFI
 
-SRCS            = $(wildcard $(SRC_DIR)/*.c)
-OBJS            = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))
+all: $(TARGET)
 
-# Пути к библиотекам gnu-efi внутри контейнера Ubuntu
-EFIINC          = /usr/include/efi
-EFIINCS         = -I$(EFIINC) -I$(EFIINC)/$(ARCH) -I$(EFIINC)/protocol
-EFILIB          = /usr/lib
-EFI_CRT_OBJS    = $(EFILIB)/crt0-efi-$(ARCH).o
-EFI_LDS         = $(EFILIB)/elf_$(ARCH)_efi.lds
+$(TARGET): $(OBJECTS)
+	ld $(LDFLAGS) $^ -o $@ -lefi -lgnuefi
 
-CC              = x86_64-linux-gnu-gcc
-LD              = x86_64-linux-gnu-ld
-OBJCOPY         = x86_64-linux-gnu-objcopy
+%.o: %.c
+	gcc $(CFLAGS) -c $< -o $@
 
-# Флаги компиляции (-fshort-wchar важен для правильного размера L"строк")
-CFLAGS          = -fno-stack-protector -fpic -fshort-wchar -mno-red-zone -Wall $(EFIINCS)
-# Флаги линковки (собираем как shared library, чтобы потом конвертировать)
-LDFLAGS         = -nostdlib -znocombreloc -T $(EFI_LDS) -shared -Bsymbolic -L $(EFILIB) $(EFI_CRT_OBJS)
-LIBS            = -lefi -lgnuefi
-
-all: $(FAT_DIR)/$(TARGET)
-
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/boot.so: $(OBJS)
-	$(LD) $(LDFLAGS) $^ -o $@ $(LIBS)
-
-$(FAT_DIR)/$(TARGET): $(BUILD_DIR)/boot.so
-	@mkdir -p $(FAT_DIR)
-	# Конвертируем ELF в PE32+ (формат UEFI)
-	$(OBJCOPY) -j .text -j .sdata -j .data -j .dynamic -j .dynsym -j .rel -j .rela -j .reloc \
-		--target=efi-app-$(ARCH) $^ $@
+clean:
+	rm -f src/boot/*.o $(TARGET)

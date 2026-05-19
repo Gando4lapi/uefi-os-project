@@ -1,5 +1,6 @@
 #include <efi.h>
 #include <efilib.h>
+#include "memory_map.h"
 
 EFI_STATUS
 EFIAPI
@@ -13,6 +14,9 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
     // Вывод текста. Строки в UEFI используют кодировку UTF-16, поэтому перед строкой ставится префикс L
     Print(L"Hello, UEFI World! Booting from Mac M3...\r\n");
+    // Вывод карты памяти UEFI
+    print_memory_map(SystemTable);
+
     Print(L"Press any key to exit...\r\n");
 
     // Ожидание нажатия любой клавиши
