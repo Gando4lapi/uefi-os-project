@@ -4,22 +4,19 @@
 #include "file_loader.h"
 #include "exit_boot.h"
 
+extern void kernel_main(void);
+
 EFI_STATUS
 EFIAPI
 efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 {
-    // Инициализируем обертки gnu-efi
     InitializeLib(ImageHandle, SystemTable);
 
-    // Очищаем экран
     uefi_call_wrapper(SystemTable->ConOut->ClearScreen, 1, SystemTable->ConOut);
 
-    // Вывод текста
     Print(L"Hello, UEFI World! Booting from Mac M3...\r\n");
-    // Вывод карты памяти UEFI
     print_memory_map(SystemTable);
 
-    // Загрузка файла hello.txt и вывод его содержимого
     EFI_FILE_PROTOCOL *file = open_file(ImageHandle, SystemTable, L"hello.txt");
     if (file) {
         VOID *buffer = NULL;
@@ -30,9 +27,7 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
             for (UINTN i = 0; i < size; i++) {
                 CHAR8 ch = ((CHAR8 *)buffer)[i];
                 if (ch >= 32 && ch < 127) {
-                    CHAR16 wch[2];
-                    wch[0] = ch;
-                    wch[1] = 0;
+                    CHAR16 wch[2] = {ch, 0};
                     Print(L"%s", wch);
                 } else if (ch == '\n') {
                     Print(L"\r\n");
@@ -46,16 +41,14 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
 
     Print(L"Press any key to exit UEFI Boot Services...\r\n");
 
-    // Ожидание нажатия клавиши
     EFI_INPUT_KEY Key;
     uefi_call_wrapper(SystemTable->ConIn->Reset, 2, SystemTable->ConIn, FALSE);
-    while (uefi_call_wrapper(SystemTable->ConIn->ReadKeyStroke, 2, SystemTable->ConIn, &Key) == EFI_NOT_READY) {
-        // ожидание
+    while (uefi_call_wrapper(SystemTable->ConIn->ReadKeyStroke, 2, SystemTable->ConIn, &Key) == EFI_NOT_READY);
+
+    EFI_STATUS status = exit_boot_services(ImageHandle, SystemTable);
+    if (!EFI_ERROR(status)) {
+        kernel_main();
     }
 
-    // Выход из Boot Services
-    exit_boot_services(ImageHandle, SystemTable);
-
-    // Сюда управление не вернётся
     return EFI_SUCCESS;
 }

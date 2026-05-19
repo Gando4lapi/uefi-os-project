@@ -6,7 +6,6 @@ EFI_STATUS exit_boot_services(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTa
     UINT32 descriptorVersion;
     EFI_MEMORY_DESCRIPTOR *memoryMap = NULL;
 
-    // Получаем актуальную карту памяти для MapKey
     status = uefi_call_wrapper(SystemTable->BootServices->GetMemoryMap, 5,
                                &mapSize, NULL, &mapKey, &descriptorSize, &descriptorVersion);
     if (status != EFI_BUFFER_TOO_SMALL) {
@@ -30,31 +29,18 @@ EFI_STATUS exit_boot_services(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTa
         return status;
     }
 
-    // Вызов ExitBootServices
     status = uefi_call_wrapper(SystemTable->BootServices->ExitBootServices, 2,
                                ImageHandle, mapKey);
 
-    // После этого Print и другие Boot Services недоступны.
-    // Используем прямую запись в текстовый видеобуфер VGA (0xB8000).
     CHAR16 *vga = (CHAR16 *)0xB8000;
     if (!EFI_ERROR(status)) {
-        // Сообщение об успехе (белый текст на чёрном фоне)
-        CHAR16 *msg = L"ExitBootServices succeeded! Now in kernel mode.";
-        for (int i = 0; msg[i] != 0; i++) {
-            vga[i] = msg[i] | 0x0700;
-        }
+        CHAR16 *msg = L"ExitBootServices succeeded!";
+        for (int i = 0; msg[i] != 0; i++) vga[i] = msg[i] | 0x0700;
+        return EFI_SUCCESS;  // управление вернётся
     } else {
-        // Сообщение об ошибке (красный текст)
         CHAR16 *msg = L"ExitBootServices failed!";
-        for (int i = 0; msg[i] != 0; i++) {
-            vga[i] = msg[i] | 0x0400;
-        }
+        for (int i = 0; msg[i] != 0; i++) vga[i] = msg[i] | 0x0400;
+        while (1) { __asm__ volatile("hlt"); }
+        return status;
     }
-
-    // Бесконечный цикл, чтобы пользователь увидел результат
-    while (1) {
-        __asm__ volatile("hlt");
-    }
-
-    return status;
 }
