@@ -1,0 +1,2 @@
+Hello from a file on UEFI disk!
+This is a test.
