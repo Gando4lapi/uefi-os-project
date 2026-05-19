@@ -4,3 +4,8 @@ fat_disk/
 *.img
 *.iso
 *.fat
+*.o
+BOOTX64.EFI
+apply_*.sh
+fix_*.sh
+finalize_*.sh
