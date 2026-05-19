@@ -1,6 +1,7 @@
 #include <efi.h>
 #include <efilib.h>
 #include "memory_map.h"
+#include "file_loader.h"
 
 EFI_STATUS
 EFIAPI
@@ -16,6 +17,14 @@ efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable)
     Print(L"Hello, UEFI World! Booting from Mac M3...\r\n");
     // Вывод карты памяти UEFI
     print_memory_map(SystemTable);
+
+    // Демонстрация открытия файла (hello.txt пока не читаем, только открываем)
+    EFI_FILE_PROTOCOL *demoFile = open_file(ImageHandle, SystemTable, L"hello.txt");
+    if (demoFile) {
+        Print(L"File hello.txt opened successfully!\r\n");
+        // Пока просто закрываем, без чтения
+        uefi_call_wrapper(demoFile->Close, 1, demoFile);
+    }
 
     Print(L"Press any key to exit...\r\n");
 
